@@ -1,5 +1,5 @@
 # alamode
-Synthetic multimodal audio database generator
+Synthetic multimodal audio dataset generator
 
 Alamode is a tool for creating controlled experimental conditions in order to
 analyze properties of algorithms for generating audio. Alamode can synthesize

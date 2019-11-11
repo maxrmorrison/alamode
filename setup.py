@@ -6,7 +6,7 @@ setup(
     url='https://github.com/maxrmorrison/alamode',
     author='Max Morrison',
     author_email='maxrmorrison@gmail.com',
-    description='Synthetic multimodal audio database generator',
+    description='Synthetic multimodal audio dataset generator',
     packages=find_packages(),    
     install_requires=['librosa', 'matplotlib', 'numpy', 'scipy'],
 )
