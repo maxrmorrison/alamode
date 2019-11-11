@@ -1,11 +1,11 @@
 import argparse
 import os
 
-import IPython.display as ipd
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import signal
+import scipy.io.wavfile
+import scipy.signal
 
 
 def timepoints(sampling_rate, duration):
@@ -16,7 +16,7 @@ def timepoints(sampling_rate, duration):
 def sine(sampling_rate, duration, amplitude=1.0):
     """Sine wave generator"""
     t = timepoints(sampling_rate, duration)
-    f = np.random.uniform(20, sampling_rate / 2)
+    f = 2 ** (np.random.uniform(np.log2(100), np.log2(sampling_rate / 2)))
     return amplitude * np.sin(2 * np.pi * f * t)
 
 
@@ -24,7 +24,7 @@ def square(sampling_rate, duration, amplitude=1.0):
     """Square wave generator"""
     t = timepoints(sampling_rate, duration)
     f = np.random.uniform(20, sampling_rate / 2)
-    return amplitude * signal.square(2 * np.pi * f * t)
+    return amplitude * scipy.signal.square(2 * np.pi * f * t)
 
 
 def white_noise(sampling_rate, duration, amplitude=1.0):
@@ -40,11 +40,12 @@ def click(sampling_rate, duration, amplitude=1.0):
     return x
 
 
-def logmelspectrogram(signal, sampling_rate, time_bins=128, frequency_bins=256):
+def logmelspectrogram(signal, sampling_rate, hop_length=125,
+                      frequency_bins=256, threshold=-40):
     """Transforms signal to log-melspectrogram"""
-    spectrogram = librosa.melspectrogram(
-        signal, sr=sampling_rate, n_mels=256,
-        hop_size=sampling_rate / time_bins)
+    spectrogram = librosa.feature.melspectrogram(
+        signal, sr=sampling_rate, n_mels=frequency_bins,
+        hop_length=hop_length)
     
     # Fix maximum at 1
     spectrogram /= np.max(spectrogram)
@@ -53,10 +54,11 @@ def logmelspectrogram(signal, sampling_rate, time_bins=128, frequency_bins=256):
     spectrogram = librosa.power_to_db(spectrogram)
     
     # Remove silent bins
-    spectrogram = spectrogram[spectrogram < -10] = 0
+    spectrogram[spectrogram < threshold] = 0
     
     # Rescale to (-1, 1)
-    return (spectrogram + 5) / 5
+    scale = np.abs(threshold) / 2
+    return (spectrogram + scale) / scale
 
 
 def generate(sound, sampling_rate, duration, num, logmel, output):
@@ -81,7 +83,8 @@ def generate(sound, sampling_rate, duration, num, logmel, output):
         
         # Save audio
         filename = os.path.join(output, sound + '-' + format(i, '06d'))
-        librosa.output.write_wav(filename + '.wav', signal, sampling_rate)
+        scipy.io.wavfile.write(
+            filename + '.wav', sampling_rate, signal.astype(np.float32))
         
         if logmel:
             # Save spectrogram
@@ -97,10 +100,10 @@ if __name__ == '__main__':
         '-d', '--duration', type=float, default=1.0,
         help='The length in seconds of generated audio')
     parser.add_argument(
-        '-l', '--logmel', type=lambda x: (str(x).lower() == 'true'),
-        default=False, help='Whether to also generate the log-melspectrograms')
+        '-l', '--logmel', action='store_true',
+        help='Whether to also generate the log-melspectrograms')
     parser.add_argument(
-        '-n', '--num', type=1, default=1,
+        '-n', '--num', type=int, default=1,
         help='The number of samples to generate')
     parser.add_argument('-o', '--output', default='.',
                         help='The directory to place output')
